@@ -83,28 +83,6 @@ class GroqClient:
             print(f"  ❌ Cloud Embedding Error: {e}")
             return []
 
-    async def chat(self, 
-                   messages: List[Dict[str, str]], 
-                   temperature: float = None,
-                   json_mode: bool = False) -> str:
-        """Send a chat completion request to Groq."""
-        s = get_settings()
-        try:
-            params = {
-                "model": self.model,
-                "messages": messages,
-                "temperature": temperature or s.ai_temperature,
-                "max_tokens": s.ai_max_tokens,
-            }
-            if json_mode:
-                params["response_format"] = {"type": "json_object"}
-
-            response = await self.client.chat.completions.create(**params)
-            return response.choices[0].message.content
-        except Exception as e:
-            print(f"  ❌ Groq Error: {e}")
-            return ""
-
     async def extract_json(self, prompt: str) -> Dict[str, Any]:
         """Extract structured JSON from a prompt using Groq's JSON mode."""
         import json
@@ -156,12 +134,25 @@ class GroqClient:
         ]
 
     async def embed_batch(self, texts: List[str]) -> List[List[float]]:
-        """Generate embeddings for a list of texts using FastEmbed."""
-        if not self.embed_model:
-            return []
+        """Generate embeddings for a list of texts using HuggingFace Cloud API."""
+        import httpx
         try:
-            embeddings = list(self.embed_model.embed(texts))
-            return [e.tolist() for e in embeddings]
+            headers = {}
+            if self._hf_token:
+                headers["Authorization"] = f"Bearer {self._hf_token}"
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    self._hf_api_url,
+                    json={"inputs": texts, "options": {"wait_for_model": True}},
+                    headers=headers,
+                    timeout=30
+                )
+                if response.status_code == 200:
+                    return response.json()
+                else:
+                    print(f"  ⚠️ HF Batch Embedding Error: {response.status_code} - {response.text}")
+                    return []
         except Exception as e:
-            print(f"  ❌ Batch Embedding Error: {e}")
+            print(f"  ❌ Cloud Batch Embedding Error: {e}")
             return []
