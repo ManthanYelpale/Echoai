@@ -101,14 +101,7 @@ async def setup():
 ║          ECHO — First Time Setup                     ║
 ╚══════════════════════════════════════════════════════╝
 """)
-    # Check .env (look one level up at root)
-    env_path = Path("../.env")
-    if not env_path.exists():
-        root_example = Path("../.env.example")
-        if root_example.exists():
-            import shutil
-            shutil.copy(root_example, env_path)
-        print("  ✅ .env file ready")
+    # Data directories
 
     # Check Ollama
     print("\n  Checking Ollama...")

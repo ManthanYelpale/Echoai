@@ -1,6 +1,6 @@
 """
 config/settings.py
-Dynamic settings loaded from .env — nothing hardcoded.
+Dynamic settings loaded from environment variables.
 All values come from environment variables with sensible defaults.
 """
 from __future__ import annotations

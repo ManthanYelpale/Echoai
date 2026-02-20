@@ -36,7 +36,6 @@ ollama pull nomic-embed-text
 git clone <repo> echo_career_ai
 cd echo_career_ai
 pip install -r requirements.txt
-cp .env.example .env          # Already has good defaults
 python run.py setup           # Verify everything works
 ```
 
@@ -54,13 +53,8 @@ Open **http://localhost:5173** → upload your resume → click "Run Agent" → 
 echo_career_ai/
 │
 ├── run.py                          ← Single entry point
-├── .env                            ← All config (gitignored)
-├── .env.example                    ← Template (safe to commit)
-├── requirements.txt
-├── .gitignore
-│
 ├── config/
-│   ├── settings.py                 ← Pydantic settings from .env
+│   ├── settings.py                 ← Pydantic settings
 │   └── claude_desktop_mcp.json     ← MCP config for Claude Desktop
 │
 ├── src/
@@ -146,7 +140,7 @@ Then in Claude Desktop you can say: *"Use Echo to show my top job matches"*
 ---
 
 ## ⚙️ Configuration
-Everything is configured via environment variables. See `.env.example` for all available options and defaults.
+Everything is configured via environment variables.
 
 ## 🏗️ How Matching Works
 
