@@ -145,19 +145,8 @@ Then in Claude Desktop you can say: *"Use Echo to show my top job matches"*
 
 ---
 
-## ⚙️ Configuration (.env)
-
-Everything is configured via `.env`. Key settings:
-
-```env
-OLLAMA_MODEL=llama3.2            # Change to mistral, phi3, gemma2
-OLLAMA_EMBED_MODEL=nomic-embed-text
-MATCH_THRESHOLD=0.55             # 0.4=lenient, 0.75=strict
-AGENT_LOOP_HOURS=6               # How often auto-scraping runs
-SCRAPE_DELAY_SECONDS=3           # Polite scraping delay
-```
-
----
+## ⚙️ Configuration
+Everything is configured via environment variables. See `.env.example` for all available options and defaults.
 
 ## 🏗️ How Matching Works
 
