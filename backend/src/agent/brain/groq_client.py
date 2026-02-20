@@ -2,8 +2,6 @@ import os
 import asyncio
 from typing import List, Dict, Any, Generator
 from groq import Groq, AsyncGroq
-# fallback to sentence-transformers since fastembed failed on Windows/Py3.14
-from sentence_transformers import SentenceTransformer
 from config.settings import get_settings
 
 class GroqClient:
