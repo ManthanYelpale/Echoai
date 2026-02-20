@@ -23,16 +23,11 @@ class GroqClient:
         self.client = AsyncGroq(api_key=s.groq_api_key)
         self.model = s.ai_model
         
-        # Initialize Embeddings (FastEmbed - Lighter for Render)
-        try:
-            from fastembed import TextEmbedding
-            # We use a lightweight model by default if not specified
-            self._embed_model_name = s.embed_model or "BAAI/bge-small-en-v1.5"
-            self.embed_model = TextEmbedding(model_name=self._embed_model_name)
-            print(f"  🧠 AI Client: Groq ({self.model}) + FastEmbed ({self._embed_model_name})")
-        except ImportError:
-            print("  ⚠️  FastEmbed not installed. Embeddings will fail.")
-            self.embed_model = None
+        # Initialize Embeddings (HuggingFace Cloud API - 0 RAM usage on Render)
+        self._hf_api_url = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
+        # We don't need a token for public small-scale use, but user can add one later if needed
+        self._hf_token = os.getenv("HF_TOKEN", "") 
+        print(f"  🧠 AI Client: Groq ({self.model}) + HuggingFace Cloud Embeddings")
 
     async def chat(
         self, 
@@ -64,19 +59,28 @@ class GroqClient:
 
     async def embed(self, text: str) -> List[float]:
         """
-        Generate embedding using FastEmbed (CPU optimized).
+        Generate embedding using HuggingFace Inference API (Cloud-based, 0 RAM).
         """
-        if not self.embed_model:
-            return []
-            
+        import httpx
         try:
-            # fastembed returns a generator of numpy arrays/lists
-            embeddings = list(self.embed_model.embed([text]))
-            if embeddings:
-                return embeddings[0].tolist() # Convert numpy/list to standard float list
-            return []
+            headers = {}
+            if self._hf_token:
+                headers["Authorization"] = f"Bearer {self._hf_token}"
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    self._hf_api_url,
+                    json={"inputs": text, "options": {"wait_for_model": True}},
+                    headers=headers,
+                    timeout=20
+                )
+                if response.status_code == 200:
+                    return response.json()
+                else:
+                    print(f"  ⚠️ HF Embedding Error: {response.status_code} - {response.text}")
+                    return []
         except Exception as e:
-            print(f"  ❌ Embedding Error: {e}")
+            print(f"  ❌ Cloud Embedding Error: {e}")
             return []
 
     async def chat(self, 
