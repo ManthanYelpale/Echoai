@@ -20,10 +20,9 @@ python-dotenv>=1.0.1
 groq>=0.5.0
 
 # ── Vector Search & Embeddings (Local Fallback) ──────────────
-faiss-cpu>=1.8.0
-sentence-transformers>=2.7.0  # Uses standard PyTorch (CPU)
-torch>=2.2.0
-numpy>=1.26.0
+# ── Vector Search & Embeddings (Local Fallback) ──────────────
+fastembed>=0.2.0  # Ultra-lightweight embeddings
+# Removed heavy libraries: faiss-cpu, sentence-transformers, torch, numpy
 
 # ── Web Scraping (read-only) ─────────────────────────────────
 httpx>=0.27.0

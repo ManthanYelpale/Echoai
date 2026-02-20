@@ -25,19 +25,61 @@ class GroqClient:
         self.client = AsyncGroq(api_key=s.groq_api_key)
         self.model = s.ai_model
         
-        # Initialize Embeddings (Lazy load)
-        # We override the model name to a known good small model for sentence-transformers
-        self._embed_model_name = "all-MiniLM-L6-v2" 
-        print(f"  🧠 AI Client: Groq ({self.model}) + SentenceTransformers (CPU)")
+        # Initialize Embeddings (FastEmbed - Lighter for Render)
+        try:
+            from fastembed import TextEmbedding
+            # We use a lightweight model by default if not specified
+            self._embed_model_name = s.embed_model or "BAAI/bge-small-en-v1.5"
+            self.embed_model = TextEmbedding(model_name=self._embed_model_name)
+            print(f"  🧠 AI Client: Groq ({self.model}) + FastEmbed ({self._embed_model_name})")
+        except ImportError:
+            print("  ⚠️  FastEmbed not installed. Embeddings will fail.")
+            self.embed_model = None
 
-    def get_embed_model(self):
-        """Lazy load the embedding model only when needed."""
-        if self._embed_model is None:
-            print(f"  ⏳ Loading embedding model: {self._embed_model_name}...")
-            # This downloads ~80MB once
-            self._embed_model = SentenceTransformer(self._embed_model_name)
-            print("  ✅ Embedding model loaded.")
-        return self._embed_model
+    async def chat(
+        self, 
+        messages: List[Dict[str, str]], 
+        temperature: float = None,
+        json_mode: bool = False
+    ) -> str:
+        """
+        Get completion from Groq.
+        """
+        if not self.client:
+            return "Error: Groq client not initialized."
+
+        try:
+            params = {
+                "model": self.model,
+                "messages": messages,
+                "temperature": temperature or get_settings().ai_temperature,
+                "max_tokens": get_settings().ai_max_tokens,
+            }
+            if json_mode:
+                params["response_format"] = {"type": "json_object"}
+
+            response = await self.client.chat.completions.create(**params)
+            return response.choices[0].message.content
+        except Exception as e:
+            print(f"  ❌ Groq Chat Error: {e}")
+            return ""
+
+    async def embed(self, text: str) -> List[float]:
+        """
+        Generate embedding using FastEmbed (CPU optimized).
+        """
+        if not self.embed_model:
+            return []
+            
+        try:
+            # fastembed returns a generator of numpy arrays/lists
+            embeddings = list(self.embed_model.embed([text]))
+            if embeddings:
+                return embeddings[0].tolist() # Convert numpy/list to standard float list
+            return []
+        except Exception as e:
+            print(f"  ❌ Embedding Error: {e}")
+            return []
 
     async def chat(self, 
                    messages: List[Dict[str, str]], 
@@ -111,15 +153,13 @@ class GroqClient:
             {"name": "mixtral-8x7b-32768", "details": "Mixtral 8x7B"},
         ]
 
-    async def embed(self, text: str) -> List[float]:
-        """Generate embedding using SentenceTransformer (CPU)."""
-        model = self.get_embed_model()
-        # encode returns numpy array, convert to list
-        params = {"convert_to_numpy": True, "show_progress_bar": False}
-        return model.encode(text, **params).tolist()
-
     async def embed_batch(self, texts: List[str]) -> List[List[float]]:
-        """Generate embeddings for a list of texts."""
-        model = self.get_embed_model()
-        params = {"convert_to_numpy": True, "show_progress_bar": False}
-        return model.encode(texts, **params).tolist()
+        """Generate embeddings for a list of texts using FastEmbed."""
+        if not self.embed_model:
+            return []
+        try:
+            embeddings = list(self.embed_model.embed(texts))
+            return [e.tolist() for e in embeddings]
+        except Exception as e:
+            print(f"  ❌ Batch Embedding Error: {e}")
+            return []
