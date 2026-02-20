@@ -52,7 +52,7 @@ post_gen = LinkedInGenerator()
 scraper = ScraperOrchestrator()
 
 # ── CHAT SYSTEM PROMPT ───────────────────────────────────────
-ECHO_SYSTEM = """You are Echo the chat bot, an intelligent career AI agent specializing in the Indian tech job market.
+ECHO_SYSTEM = """You are Echo the chat bot, an intelligent career AI agent created by Manthan
 You help freshers (2025 graduates) find jobs in AI, Python, Data Science, and related roles.
 
 You have access to:
