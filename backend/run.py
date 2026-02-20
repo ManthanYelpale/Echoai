@@ -28,9 +28,10 @@ def start_api():
     )
 
 
+
 async def run_agent():
     """Start autonomous agent loop."""
-    from src.agent.brain.ollama_client import OllamaClient
+    from src.agent.brain.groq_client import GroqClient
     from src.agent.scrapers.job_scraper import ScraperOrchestrator
     from src.agent.tools.job_matcher import JobMatcher
     from src.agent.tools.resume_analyzer import ResumeAnalyzer
@@ -46,10 +47,9 @@ async def run_agent():
     matcher = JobMatcher()
     analyzer = ResumeAnalyzer()
     post_gen = LinkedInGenerator()
-    ollama = OllamaClient()
+    groq = GroqClient()
 
-    await ollama.auto_select_model()
-    print(f"  Model: {ollama.model}")
+    print(f"  Model: {groq.model}")
 
     resume = db.get_active_resume()
     if not resume:
@@ -102,25 +102,15 @@ async def setup():
 ╚══════════════════════════════════════════════════════╝
 """)
     # Data directories
-
-    # Check Ollama
-    print("\n  Checking Ollama...")
-    try:
-        import httpx
-        async with httpx.AsyncClient(timeout=5) as c:
-            r = await c.get("http://localhost:11434/api/tags")
-            if r.status_code == 200:
-                models = r.json().get("models", [])
-                if models:
-                    print(f"  ✅ Ollama running. Models: {', '.join(m['name'] for m in models[:3])}")
-                else:
-                    print("  ⚠️  Ollama running but no models found!")
-                    print("  Run: ollama pull llama3.2 && ollama pull nomic-embed-text")
-    except Exception:
-        print("""  ❌ Ollama not found!
-  Install: https://ollama.ai/download
-  Then: ollama pull llama3.2 && ollama pull nomic-embed-text
-""")
+    from config.settings import get_settings
+    s = get_settings()
+    
+    # Check Groq
+    print("\n  Checking Configuration...")
+    if not s.groq_api_key:
+         print("  ❌ GROQ_API_KEY missing in .env")
+    else:
+         print(f"  ✅ Groq Key found: {s.groq_api_key[:6]}...")
 
     # Data directories
     for d in ["data/uploads", "data/reports", "data/logs", "data/vector_store"]:

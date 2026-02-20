@@ -18,7 +18,7 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 
 from config.settings import get_settings
-from src.agent.brain.ollama_client import OllamaClient
+from src.agent.brain.groq_client import GroqClient
 from src.agent.brain.logger import get_logger
 from src.agent.memory.database import Database
 from src.agent.tools.resume_analyzer import ResumeAnalyzer
@@ -45,14 +45,14 @@ app.add_middleware(
 
 # ── Singletons ───────────────────────────────────────────────
 db = Database()
-ollama = OllamaClient()
+groq = GroqClient()
 analyzer = ResumeAnalyzer()
 matcher = JobMatcher()
 post_gen = LinkedInGenerator()
 scraper = ScraperOrchestrator()
 
 # ── CHAT SYSTEM PROMPT ───────────────────────────────────────
-ECHO_SYSTEM = """You are Echo, an intelligent career AI agent specializing in the Indian tech job market.
+ECHO_SYSTEM = """You are Echo the chat bot, an intelligent career AI agent specializing in the Indian tech job market.
 You help freshers (2025 graduates) find jobs in AI, Python, Data Science, and related roles.
 
 You have access to:
@@ -107,7 +107,7 @@ Actions:
 Return JSON only:
 {{"action": "show_jobs", "params": {{}}}}"""
 
-    result = await ollama.extract_json(intent_prompt)
+    result = await groq.extract_json(intent_prompt)
     if not result:
         return None
 
@@ -182,28 +182,28 @@ async def root():
 
 @app.get("/health")
 async def health():
-    ollama_ok = await ollama.is_available()
+    groq_ok = await groq.is_available()
     stats = db.get_stats()
     return {
         "status": "healthy",
-        "ollama": ollama_ok,
-        "model": ollama.model,
+        "groq": groq_ok,
+        "model": groq.model,
         "stats": stats,
         "timestamp": datetime.now().isoformat(),
     }
 
-@app.get("/api/ollama/models")
+@app.get("/api/ai/models")
 async def get_models():
-    models = await ollama.list_models()
-    return {"models": models, "current": ollama.model}
+    models = await groq.list_models()
+    return {"models": models, "current": groq.model}
 
-@app.post("/api/ollama/model")
+@app.post("/api/ai/model")
 async def set_model(body: dict):
     model = body.get("model","")
     if model:
-        ollama.model = model
+        groq.model = model
         db.set_pref("selected_model", model)
-    return {"model": ollama.model}
+    return {"model": groq.model}
 
 # Chat — streaming SSE
 @app.post("/api/chat/stream")
@@ -223,7 +223,7 @@ async def chat_stream(req: ChatRequest):
             msgs.append({"role": "user", "content": req.message})
 
             summary_prompt = f"The tool returned this result: {json.dumps(tool_result)[:500]}. Summarize it naturally in 1-2 sentences."
-            async for chunk in ollama.stream_chat(msgs, system=ECHO_SYSTEM + f"\n{summary_prompt}"):
+            async for chunk in groq.stream_chat(msgs, system=ECHO_SYSTEM + f"\n{summary_prompt}"):
                 yield f"data: {json.dumps({'type': 'text', 'chunk': chunk})}\n\n"
         else:
             # Pure chat with history
@@ -232,7 +232,7 @@ async def chat_stream(req: ChatRequest):
             msgs.append({"role": "user", "content": req.message})
 
             full_response = ""
-            async for chunk in ollama.stream_chat(msgs, system=ECHO_SYSTEM):
+            async for chunk in groq.stream_chat(msgs, system=ECHO_SYSTEM):
                 full_response += chunk
                 yield f"data: {json.dumps({'type': 'text', 'chunk': chunk})}\n\n"
 
@@ -257,7 +257,16 @@ async def chat(req: ChatRequest):
     history = db.get_history(session_id, 10)
     msgs = [{"role": m["role"], "content": m["content"]} for m in history]
     msgs.append({"role": "user", "content": req.message})
-    response = await ollama.chat(msgs, system=ECHO_SYSTEM)
+    
+    # We need to construct messages properly for Groq
+    # If system prompt is needed, add it to messages list if not using wrapper
+    # But our GroqClient wrapper handles it via system param if we implemented stream_chat with system param
+    # Wait, for regular chat, GroqClient.chat doesn't take 'system' param in my implementation?
+    # Let me check GroqClient.chat signature: async def chat(self, messages, temperature=None, json_mode=False)
+    # The 'system' param is missing in GroqClient.chat. I should prepend it to messages.
+    
+    chat_msgs = [{"role": "system", "content": ECHO_SYSTEM}] + msgs
+    response = await groq.chat(chat_msgs)
 
     db.save_message(session_id, "user", req.message)
     db.save_message(session_id, "assistant", response)

@@ -3,10 +3,10 @@ src/agent/tools/resume_analyzer.py
 Fully dynamic resume analysis via Ollama LLM.
 No hardcoded skill lists — LLM extracts everything from the actual resume.
 """
-import re
+import json
 from pathlib import Path
 from typing import Optional
-from src.agent.brain.ollama_client import OllamaClient
+from src.agent.brain.groq_client import GroqClient
 from src.agent.brain.logger import get_logger
 from src.agent.memory.database import Database
 from src.agent.memory.vector_store import VectorStore
@@ -16,7 +16,7 @@ logger = get_logger("resume_analyzer")
 
 class ResumeAnalyzer:
     def __init__(self):
-        self.llm = OllamaClient()
+        self.llm = GroqClient()
         self.db = Database()
         self.vs = VectorStore()
 
@@ -24,7 +24,7 @@ class ResumeAnalyzer:
         """
         Full async resume analysis pipeline.
         Accepts either file path or raw text.
-        All extraction done via local LLM — fully dynamic.
+        All extraction done via Cloud LLM (Groq) — fully dynamic.
         """
         # 1. Extract text
         if raw_text:
@@ -66,22 +66,22 @@ class ResumeAnalyzer:
         self.db.save_resume(extracted)
         logger.info(f"Resume saved. Skills: {len(extracted.get('skills', []))}")
 
-        # 5. Generate and save embedding — always embed raw text as fallback
+        # 5. Generate and save embedding — using FastEmbed (CPU)
         embed_text = self._build_embed_text(extracted)
         if not embed_text.strip():
             # Fallback: embed raw resume text so job matching always works
             embed_text = text[:2000]
+            
         embedding = await self.llm.embed(embed_text)
         if embedding:
             self.vs.save_resume_vector(embedding)
         else:
-            logger.warning("Embedding failed — job matching will not work until Ollama embed model is available")
-
+            logger.warning("Embedding failed")
 
         return extracted
 
     async def _llm_extract(self, text: str) -> Optional[dict]:
-        """Use Ollama to extract structured data from resume text."""
+        """Use Groq to extract structured data from resume text."""
         prompt = f"""Analyze this resume and extract all information. Return ONLY valid JSON.
 
 RESUME TEXT:
@@ -117,7 +117,12 @@ Return this exact JSON structure (fill all fields based on the resume):
   "experience_level": "fresher"
 }}"""
 
-        return await self.llm.extract_json(prompt)
+        try:
+            response = await self.llm.chat([{"role": "user", "content": prompt}], json_mode=True)
+            return json.loads(response)
+        except Exception as e:
+            logger.error(f"Resume extraction failed: {e}")
+            return {}
 
     async def _identify_gaps(self, profile: dict) -> list:
         """Dynamically find skill gaps by asking LLM about market trends."""
@@ -141,16 +146,21 @@ Return ONLY valid JSON:
   ]
 }}"""
 
-        result = await self.llm.extract_json(prompt)
-        if result and "gaps" in result:
-            # Save each gap to DB
-            for gap in result["gaps"]:
-                self.db.bump_skill(
-                    gap.get("skill",""),
-                    level="none",
-                    category=gap.get("category","general")
-                )
-            return result["gaps"]
+        try:
+            response = await self.llm.chat([{"role": "user", "content": prompt}], json_mode=True)
+            result = json.loads(response)
+            
+            if result and "gaps" in result:
+                # Save each gap to DB
+                for gap in result["gaps"]:
+                    self.db.bump_skill(
+                        gap.get("skill",""),
+                        level="none",
+                        category=gap.get("category","general")
+                    )
+                return result["gaps"]
+        except:
+            return []
         return []
 
     def _extract_text(self, path: Path) -> str:
@@ -215,4 +225,4 @@ Write a helpful, actionable report with:
 
 Keep it practical, 300 words max."""
 
-        return await self.llm.generate(prompt)
+        return await self.llm.chat([{"role": "user", "content": prompt}])

@@ -14,10 +14,6 @@ export default function Sidebar({ panel, setPanel, health, stats, onRunAgent }) 
                     <span className="logo-text">Echo</span>
                 </div>
                 <div className="logo-tagline">Your Career Intelligence Agent</div>
-                <div className={`status-pill ${health.ollama ? '' : 'offline'}`}>
-                    <span className="status-dot" />
-                    {health.ollama ? `${health.model} ready` : 'Ollama offline'}
-                </div>
             </div>
 
             <nav className="sidebar-nav">

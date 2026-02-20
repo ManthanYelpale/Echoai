@@ -3,19 +3,23 @@ import sys
 import os
 import asyncio
 
-# Ensure we can import from src and config
-sys.path.append(os.getcwd())
+# Ensure project root is in path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from src.agent.tools.job_matcher import JobMatcher
+try:
+    from src.agent.tools.job_matcher import JobMatcher
+except ImportError:
+    # Fallback if running from root
+    from backend.src.agent.tools.job_matcher import JobMatcher
 
 async def main():
+    print("🚀 Triggering Job Matcher (Groq + SentenceTransformers)...")
     try:
         matcher = JobMatcher()
-        print("Running Job Matcher...")
         result = await matcher.run()
-        print(f"Result: {result}")
+        print(f"✅ Match Result: {result}")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"❌ Error during matching: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())

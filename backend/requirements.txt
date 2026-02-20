@@ -16,8 +16,13 @@ pydantic>=2.7.0
 pydantic-settings>=2.2.0
 python-dotenv>=1.0.1
 
-# ── Vector Search (free, local) ──────────────────────────────
+# ── AI Client (Cloud) ────────────────────────────────────────
+groq>=0.5.0
+
+# ── Vector Search & Embeddings (Local Fallback) ──────────────
 faiss-cpu>=1.8.0
+sentence-transformers>=2.7.0  # Uses standard PyTorch (CPU)
+torch>=2.2.0
 numpy>=1.26.0
 
 # ── Web Scraping (read-only) ─────────────────────────────────

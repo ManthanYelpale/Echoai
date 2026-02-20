@@ -40,13 +40,13 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> List[str]:
         return [o.strip() for o in self.cors_origins.split(",")]
 
-    # ── Ollama ───────────────────────────────────────────────
-    ollama_base_url: str = Field(default="http://localhost:11434", alias="OLLAMA_BASE_URL")
-    ollama_model: str = Field(default="llama3.2", alias="OLLAMA_MODEL")
-    ollama_embed_model: str = Field(default="nomic-embed-text", alias="OLLAMA_EMBED_MODEL")
-    ollama_temperature: float = Field(default=0.3, alias="OLLAMA_TEMPERATURE")
-    ollama_max_tokens: int = Field(default=2048, alias="OLLAMA_MAX_TOKENS")
-    ollama_timeout: int = Field(default=60, alias="OLLAMA_TIMEOUT")
+    # ── AI (Groq & FastEmbed) ────────────────────────────────
+    groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
+    ai_model: str = Field(default="llama-3.3-70b-versatile", alias="AI_MODEL")  # Groq model
+    embed_model: str = Field(default="nomic-ai/nomic-embed-text-v1.5", alias="EMBED_MODEL") # FastEmbed model
+    ai_temperature: float = Field(default=0.3, alias="AI_TEMPERATURE")
+    ai_max_tokens: int = Field(default=2048, alias="AI_MAX_TOKENS")
+    ai_timeout: int = Field(default=30, alias="AI_TIMEOUT")
 
     # ── Database ─────────────────────────────────────────────
     sqlite_path: str = Field(default="data/echo_career.db", alias="SQLITE_PATH")

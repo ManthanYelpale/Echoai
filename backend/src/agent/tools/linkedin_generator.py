@@ -3,7 +3,8 @@ src/agent/tools/linkedin_generator.py
 LLM-driven LinkedIn post generator. No hardcoded templates.
 All posts generated dynamically by Ollama based on candidate profile.
 """
-from src.agent.brain.ollama_client import OllamaClient
+import json
+from src.agent.brain.groq_client import GroqClient
 from src.agent.brain.logger import get_logger
 from src.agent.memory.database import Database
 
@@ -21,12 +22,12 @@ POST_TYPES = {
 
 class LinkedInGenerator:
     def __init__(self):
-        self.llm = OllamaClient()
+        self.llm = GroqClient()
         self.db = Database()
 
     async def generate(self, post_type: str = "open_to_work",
                         target_role: str = None, topic: str = None) -> dict:
-        """Generate a LinkedIn post using Ollama. Fully dynamic."""
+        """Generate a LinkedIn post using Cloud LLM (Groq). Fully dynamic."""
         resume = self.db.get_active_resume()
         name = resume.get("name","") if resume else ""
         skills = (resume.get("skills",[]) + resume.get("tech_stack",[]))[:12] if resume else []
@@ -58,7 +59,7 @@ RULES:
 
 Write ONLY the post content, nothing else:"""
 
-        content = await self.llm.generate(prompt, temperature=0.75)
+        content = await self.llm.chat([{"role": "user", "content": prompt}], temperature=0.75)
         if not content or len(content) < 50:
             content = await self._fallback_post(post_type, roles, skills, name)
 
@@ -89,9 +90,16 @@ Context: Indian tech fresher 2025
 Return ONLY a JSON array of hashtag strings starting with #:
 ["#Python", "#DataScience", ...]"""
 
-        result = await self.llm.extract_json(prompt)
-        if isinstance(result, list):
-            return result[:10]
+        try:
+            response = await self.llm.chat([{"role": "user", "content": prompt}], json_mode=True)
+            result = json.loads(response)
+            if isinstance(result, list):
+                return result[:10]
+            if isinstance(result, dict) and "hashtags" in result:
+                return result["hashtags"][:10]
+        except:
+            pass
+            
         # Safe fallback
         return ["#OpenToWork", "#FreshGraduate", "#TechJobs", "#India", "#Python",
                 "#DataScience", "#AIEngineer", "#HiringFreshers", "#2025Graduate"]
@@ -101,7 +109,7 @@ Return ONLY a JSON array of hashtag strings starting with #:
         prompt = f"""Write a short LinkedIn post (150 words) for {name or 'a fresher'} 
 seeking {role} roles in India. Skills: {', '.join(skills[:6])}.
 Type: {post_type}. Make it authentic and professional. No hashtags."""
-        return await self.llm.generate(prompt) or "Excited to begin my tech career journey! Looking for opportunities in India as a fresher. Let's connect!"
+        return await self.llm.chat([{"role": "user", "content": prompt}]) or "Excited to begin my tech career journey! Looking for opportunities in India as a fresher. Let's connect!"
 
     def _predict_engagement(self, content: str) -> str:
         score = 0
@@ -124,7 +132,13 @@ Type: {post_type}. Make it authentic and professional. No hashtags."""
             ("learning_update", roles[0] if roles else "AI Engineer", "RAG Pipelines"),
             ("achievement_story", roles[0] if roles else "Python Developer", None),
         ]
+        results = []
+        
+        # Sequentially generate to avoid rate limits on free tier
         for ptype, role, topic in tasks:
             post = await self.generate(post_type=ptype, target_role=role, topic=topic)
             results.append(post)
+            import asyncio
+            await asyncio.sleep(1) # Polite delay
+            
         return results

@@ -1,11 +1,6 @@
-"""
-src/agent/tools/job_matcher.py
-Embedding-based + LLM job matching.
-Pipeline: Ollama embed → FAISS cosine → LLM re-rank (borderline)
-"""
 import json
 from config.settings import get_settings
-from src.agent.brain.ollama_client import OllamaClient
+from src.agent.brain.groq_client import GroqClient
 from src.agent.brain.logger import get_logger
 from src.agent.memory.database import Database
 from src.agent.memory.vector_store import VectorStore
@@ -17,7 +12,7 @@ class JobMatcher:
     def __init__(self):
         self.db = Database()
         self.vs = VectorStore()
-        self.llm = OllamaClient()
+        self.llm = GroqClient()
         s = get_settings()
         self.threshold = s.match_threshold
         self.top_n = s.match_top_n
@@ -40,6 +35,7 @@ class JobMatcher:
 
         for job in unmatched:
             text = self._job_to_text(job)
+            # Use FastEmbed (CPU) via GroqClient wrapper
             embedding = await self.llm.embed(text)
             if embedding:
                 self.vs.add_job_vector(job["id"], embedding, {
@@ -71,7 +67,7 @@ class JobMatcher:
 
             match = self._build_match(job, score, resume)
 
-            # LLM re-rank for borderline scores
+            # LLM re-rank for borderline scores (Groq Cloud)
             if self.rerank and self.rerank_min <= score <= self.rerank_max:
                 llm_result = await self._llm_rerank(job, score, resume)
                 if llm_result:
@@ -155,8 +151,6 @@ class JobMatcher:
         title_lower = title.lower()
         target_roles = [r.lower() for r in (resume or {}).get("target_roles", [])]
         
-        # logger.info(f"Checking role match for '{title}' against {target_roles}")
-
         # 1. Direct match with target role
         for role in target_roles:
             if role in title_lower:
@@ -184,13 +178,19 @@ Embedding score: {score:.2f}
 Return JSON only:
 {{"llm_score": 0.75, "reasoning": "one sentence"}}"""
 
-        result = await self.llm.extract_json(prompt)
-        if result:
+        # Groq JSON mode
+        try:
+            response_text = await self.llm.chat(
+                [{"role": "user", "content": prompt}], 
+                json_mode=True
+            )
+            result = json.loads(response_text)
             return {
                 "llm_score": result.get("llm_score", score),
                 "llm_reasoning": result.get("reasoning", ""),
             }
-        return {}
+        except:
+            return {}
 
     def _final_score(self, embed: float, llm) -> float:
         if llm is not None:
@@ -214,4 +214,4 @@ CANDIDATE LEVEL: 2025 fresher
 
 Give a 3-4 sentence honest assessment. Be specific about skill matches and gaps."""
 
-        return await self.llm.generate(prompt)
+        return await self.llm.chat([{"role": "user", "content": prompt}])

@@ -3,8 +3,7 @@ import { getSettings, saveSettings } from '../api.js'
 
 export default function SettingsPanel({ toast, active }) {
     const [form, setForm] = useState({
-        ollama_model: '',
-        ollama_embed_model: 'nomic-embed-text',
+        ai_model: '',
         target_roles: '',
         preferred_locations: '',
         max_experience: 2,
@@ -37,22 +36,15 @@ export default function SettingsPanel({ toast, active }) {
     return (
         <div className="panel-body">
             <div className="settings-grid">
-                {/* Ollama */}
+                {/* Cloud AI (Groq) */}
                 <div className="settings-section">
-                    <div className="settings-section-title">🤖 Ollama / LLM</div>
+                    <div className="settings-section-title">☁️ Cloud AI (Groq)</div>
                     <div className="setting-row">
                         <div>
-                            <div className="setting-label">LLM Model</div>
-                            <div className="setting-sublabel">e.g. llama3.2, mistral</div>
+                            <div className="setting-label">AI Model</div>
+                            <div className="setting-sublabel">Powered by Groq Cloud</div>
                         </div>
-                        <input className="setting-input" value={form.ollama_model} onChange={e => set('ollama_model', e.target.value)} placeholder="llama3.2" />
-                    </div>
-                    <div className="setting-row">
-                        <div>
-                            <div className="setting-label">Embed Model</div>
-                            <div className="setting-sublabel">For job matching</div>
-                        </div>
-                        <input className="setting-input" value={form.ollama_embed_model} onChange={e => set('ollama_embed_model', e.target.value)} />
+                        <input className="setting-input" value={form.ai_model} onChange={e => set('ai_model', e.target.value)} placeholder="llama-3.3-70b-versatile" />
                     </div>
                 </div>
 

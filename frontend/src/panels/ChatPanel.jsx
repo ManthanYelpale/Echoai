@@ -117,7 +117,7 @@ export default function ChatPanel({ toast }) {
             (err) => {
                 setMessages(prev => prev.map(m =>
                     m.id === echoId
-                        ? { ...m, content: '⚠️ No response from Ollama. Make sure a model is installed: run  ollama pull llama3.2  in a terminal, then try again.', streaming: false }
+                        ? { ...m, content: '⚠️ No response from Cloud AI (Groq). Please checks your internet connection or API key.', streaming: false }
                         : m
                 ))
                 setSending(false)
@@ -172,7 +172,7 @@ export default function ChatPanel({ toast }) {
                 {showWelcome && (
                     <div className="welcome">
                         <div className="welcome-icon">✦</div>
-                        <h2>Hello! I'm Echo ✨</h2>
+                        <h2>Hello! I'm Echo the chat bot ✨</h2>
                         <p>Your personal AI career agent, tuned for India's tech job market. I can find you jobs, analyse skill gaps, and write LinkedIn posts that get recruiter attention.</p>
                         <div className="quick-actions">
                             {[
@@ -227,7 +227,7 @@ export default function ChatPanel({ toast }) {
                     />
                     <button className="send-btn" onClick={sendMessage} disabled={sending}>➤</button>
                 </div>
-                <div className="input-hint">Echo uses your local Ollama model — completely private, no data leaves your machine.</div>
+                <div className="input-hint">Echo uses Groq Cloud AI — Fast, smart, and free.</div>
             </div>
         </>
     )

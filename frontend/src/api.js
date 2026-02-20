@@ -6,8 +6,8 @@ export async function checkHealth() {
     return r.json()
 }
 
-export async function getOllamaModels() {
-    const r = await fetch(`${BASE}/api/ollama/models`)
+export async function getModels() {
+    const r = await fetch(`${BASE}/api/ai/models`)
     return r.json()
 }
 

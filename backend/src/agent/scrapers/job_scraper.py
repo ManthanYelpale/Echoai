@@ -313,7 +313,9 @@ class WellfoundScraper(BaseScraper):
 
 class ScraperOrchestrator:
     """Runs all scrapers, saves results, returns summary."""
-    SCRAPERS = [NaukriScraper, IndeedScraper, InternshalaJobsScraper, WellfoundScraper]
+    # SCRAPERS = [NaukriScraper, IndeedScraper, InternshalaJobsScraper, WellfoundScraper]
+    # To be 10000% safe and polite, we only use the one that works natively:
+    SCRAPERS = [InternshalaJobsScraper]
 
     def __init__(self):
         self.db = Database()

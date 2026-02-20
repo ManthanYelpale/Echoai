@@ -19,7 +19,7 @@ const PANELS = {
 
 export default function App() {
     const [panel, setPanel] = useState('chat')
-    const [health, setHealth] = useState({ ollama: false, model: '' })
+    const [health, setHealth] = useState({ groq: false, model: '' })
     const [stats, setStats] = useState({})
     const [toasts, setToasts] = useState([])
     const [loading, setLoading] = useState(false)
