@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "echo-career-agent": {
+      "command": "python",
+      "args": ["run.py", "mcp"],
+      "cwd": "/path/to/echo_career_ai",
+      "env": {
+        "PYTHONPATH": "/path/to/echo_career_ai"
+      }
+    }
+  }
+}

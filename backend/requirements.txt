@@ -1,0 +1,33 @@
+# ============================================================
+# Echo Career AI — Python Requirements
+# All free, all local, no paid APIs
+# ============================================================
+
+# ── API Framework ────────────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9       # File upload support
+
+# ── HTTP Client (async) ──────────────────────────────────────
+httpx>=0.27.0
+
+# ── Settings from .env ───────────────────────────────────────
+pydantic>=2.7.0
+pydantic-settings>=2.2.0
+python-dotenv>=1.0.1
+
+# ── Vector Search (free, local) ──────────────────────────────
+faiss-cpu>=1.8.0
+numpy>=1.26.0
+
+# ── Web Scraping (read-only) ─────────────────────────────────
+httpx>=0.27.0
+beautifulsoup4>=4.12.3
+lxml>=5.2.0
+
+# ── Document Parsing ─────────────────────────────────────────
+pypdf>=4.2.0
+python-docx>=1.1.2
+
+# ── Utilities ────────────────────────────────────────────────
+pyyaml>=6.0.1
